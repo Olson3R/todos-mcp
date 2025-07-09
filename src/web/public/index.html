@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todo Project Manager</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .workspaces {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .workspace-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            flex: 1;
+        }
+
+        .workspace-card h3 {
+            color: #34495e;
+            margin-bottom: 10px;
+        }
+
+        .workspace-path {
+            color: #7f8c8d;
+            font-family: monospace;
+            font-size: 0.9em;
+            margin-bottom: 15px;
+        }
+
+        .projects {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+        }
+
+        .project-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .project-header {
+            background: #3498db;
+            color: white;
+            padding: 15px 20px;
+            position: relative;
+        }
+
+        .project-header h3 {
+            margin-bottom: 5px;
+        }
+
+        .project-description {
+            opacity: 0.9;
+            font-size: 0.9em;
+        }
+
+        .project-actions {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+        }
+
+        .project-content {
+            padding: 20px;
+        }
+
+        .phases {
+            margin-bottom: 20px;
+        }
+
+        .phase {
+            background: #ecf0f1;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .phase h4 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .todos {
+            list-style: none;
+        }
+
+        .todo-item {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .todo-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .todo-item.pending {
+            border-left: 4px solid #95a5a6;
+        }
+
+        .todo-item.in-progress {
+            border-left: 4px solid #f39c12;
+            background-color: #fff3cd;
+        }
+
+        .todo-item.completed {
+            border-left: 4px solid #27ae60;
+            background-color: #d4edda;
+        }
+
+        .todo-content {
+            flex: 1;
+        }
+
+        .todo-title {
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+
+        .todo-description {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .todo-status {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+
+        .todo-status.pending {
+            background-color: #95a5a6;
+            color: white;
+        }
+
+        .todo-status.in-progress {
+            background-color: #f39c12;
+            color: white;
+        }
+
+        .todo-status.completed {
+            background-color: #27ae60;
+            color: white;
+        }
+
+        .documents {
+            margin-top: 20px;
+        }
+
+        .documents h4 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .document-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .document-item {
+            background: #ecf0f1;
+            padding: 8px 12px;
+            border-radius: 16px;
+            font-size: 0.9em;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .document-item.link {
+            border-left: 3px solid #3498db;
+        }
+
+        .document-item.file {
+            border-left: 3px solid #e74c3c;
+        }
+
+        .document-item.confluence {
+            border-left: 3px solid #9b59b6;
+        }
+
+        .btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: background-color 0.2s;
+        }
+
+        .btn:hover {
+            background: #2980b9;
+        }
+
+        .btn-small {
+            padding: 4px 8px;
+            font-size: 0.8em;
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            max-width: 500px;
+            margin: 50px auto;
+            position: relative;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h3 {
+            color: #2c3e50;
+        }
+
+        .close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #7f8c8d;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #34495e;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .projects {
+                grid-template-columns: 1fr;
+            }
+            
+            .workspaces {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Todo Project Manager</h1>
+            <button class="btn" onclick="showCreateProjectModal()">Create New Project</button>
+        </div>
+
+        <div id="error-message" class="error" style="display: none;"></div>
+
+        <div id="loading" class="loading">Loading...</div>
+
+        <div id="workspaces" class="workspaces" style="display: none;"></div>
+
+        <div id="projects" class="projects" style="display: none;"></div>
+
+        <div id="empty-state" class="empty-state" style="display: none;">
+            <h3>No projects found</h3>
+            <p>Create your first project to get started!</p>
+        </div>
+    </div>
+
+    <!-- Create Project Modal -->
+    <div id="createProjectModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Create New Project</h3>
+                <button class="close" onclick="hideCreateProjectModal()">&times;</button>
+            </div>
+            <form id="createProjectForm">
+                <div class="form-group">
+                    <label for="projectName">Project Name</label>
+                    <input type="text" id="projectName" required>
+                </div>
+                <div class="form-group">
+                    <label for="projectDescription">Description</label>
+                    <textarea id="projectDescription"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="workspacePath">Workspace Path</label>
+                    <input type="text" id="workspacePath" required>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn" onclick="hideCreateProjectModal()">Cancel</button>
+                    <button type="submit" class="btn">Create Project</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Create Todo Modal -->
+    <div id="createTodoModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Create New Todo</h3>
+                <button class="close" onclick="hideCreateTodoModal()">&times;</button>
+            </div>
+            <form id="createTodoForm">
+                <div class="form-group">
+                    <label for="todoTitle">Title</label>
+                    <input type="text" id="todoTitle" required>
+                </div>
+                <div class="form-group">
+                    <label for="todoDescription">Description</label>
+                    <textarea id="todoDescription"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="todoPhase">Phase</label>
+                    <select id="todoPhase">
+                        <option value="">No Phase</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn" onclick="hideCreateTodoModal()">Cancel</button>
+                    <button type="submit" class="btn">Create Todo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let currentProjectId = null;
+        let workspaces = [];
+        let projects = [];
+
+        async function loadData() {
+            try {
+                const [workspacesResponse, projectsResponse] = await Promise.all([
+                    fetch('/api/workspaces'),
+                    fetch('/api/projects')
+                ]);
+
+                workspaces = await workspacesResponse.json();
+                projects = await projectsResponse.json();
+
+                renderWorkspaces();
+                renderProjects();
+            } catch (error) {
+                showError('Failed to load data: ' + error.message);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        function renderWorkspaces() {
+            const workspacesContainer = document.getElementById('workspaces');
+            
+            if (workspaces.length === 0) {
+                workspacesContainer.style.display = 'none';
+                return;
+            }
+
+            workspacesContainer.innerHTML = workspaces.map(workspace => `
+                <div class="workspace-card">
+                    <h3>${workspace.name}</h3>
+                    <div class="workspace-path">${workspace.path}</div>
+                    <div>${workspace.projects.length} project(s)</div>
+                </div>
+            `).join('');
+
+            workspacesContainer.style.display = 'flex';
+        }
+
+        function renderProjects() {
+            const projectsContainer = document.getElementById('projects');
+            const emptyState = document.getElementById('empty-state');
+
+            if (projects.length === 0) {
+                projectsContainer.style.display = 'none';
+                emptyState.style.display = 'block';
+                return;
+            }
+
+            projectsContainer.innerHTML = projects.map(project => `
+                <div class="project-card">
+                    <div class="project-header">
+                        <h3>${project.name}</h3>
+                        ${project.description ? `<div class="project-description">${project.description}</div>` : ''}
+                        <div class="project-actions">
+                            <button class="btn btn-small" onclick="showCreateTodoModal('${project.id}')">Add Todo</button>
+                            <button class="btn btn-small btn-danger" onclick="deleteProject('${project.id}')">Delete</button>
+                        </div>
+                    </div>
+                    <div class="project-content">
+                        ${renderPhases(project)}
+                        ${renderTodos(project)}
+                        ${renderDocuments(project)}
+                    </div>
+                </div>
+            `).join('');
+
+            projectsContainer.style.display = 'grid';
+            emptyState.style.display = 'none';
+        }
+
+        function renderPhases(project) {
+            if (project.phases.length === 0) return '';
+
+            return `
+                <div class="phases">
+                    <h4>Phases</h4>
+                    ${project.phases.map(phase => `
+                        <div class="phase">
+                            <h4>${phase.name}</h4>
+                            ${phase.description ? `<div>${phase.description}</div>` : ''}
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function renderTodos(project) {
+            if (project.todos.length === 0) {
+                return '<div class="empty-state"><p>No todos yet. Add your first todo!</p></div>';
+            }
+
+            const sortedTodos = [...project.todos].sort((a, b) => a.order - b.order);
+
+            return `
+                <div class="todos">
+                    <h4>Todos</h4>
+                    <ul class="todos">
+                        ${sortedTodos.map(todo => `
+                            <li class="todo-item ${todo.status}" onclick="toggleTodoStatus('${todo.id}', '${todo.status}')">
+                                <div class="todo-content">
+                                    <div class="todo-title">${todo.title}</div>
+                                    ${todo.description ? `<div class="todo-description">${todo.description}</div>` : ''}
+                                </div>
+                                <div class="todo-status ${todo.status}">${todo.status}</div>
+                            </li>
+                        `).join('')}
+                    </ul>
+                </div>
+            `;
+        }
+
+        function renderDocuments(project) {
+            if (project.documents.length === 0) return '';
+
+            return `
+                <div class="documents">
+                    <h4>Documents</h4>
+                    <div class="document-list">
+                        ${project.documents.map(doc => `
+                            <div class="document-item ${doc.type}">
+                                <span>${doc.title}</span>
+                                <button class="btn btn-small btn-danger" onclick="removeDocument('${project.id}', '${doc.id}')">×</button>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function showError(message) {
+            const errorElement = document.getElementById('error-message');
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
+            setTimeout(() => {
+                errorElement.style.display = 'none';
+            }, 5000);
+        }
+
+        function showCreateProjectModal() {
+            document.getElementById('createProjectModal').style.display = 'block';
+        }
+
+        function hideCreateProjectModal() {
+            document.getElementById('createProjectModal').style.display = 'none';
+            document.getElementById('createProjectForm').reset();
+        }
+
+        function showCreateTodoModal(projectId) {
+            currentProjectId = projectId;
+            const project = projects.find(p => p.id === projectId);
+            
+            // Populate phases dropdown
+            const phaseSelect = document.getElementById('todoPhase');
+            phaseSelect.innerHTML = '<option value="">No Phase</option>';
+            
+            if (project && project.phases) {
+                project.phases.forEach(phase => {
+                    phaseSelect.innerHTML += `<option value="${phase.id}">${phase.name}</option>`;
+                });
+            }
+
+            document.getElementById('createTodoModal').style.display = 'block';
+        }
+
+        function hideCreateTodoModal() {
+            document.getElementById('createTodoModal').style.display = 'none';
+            document.getElementById('createTodoForm').reset();
+            currentProjectId = null;
+        }
+
+        async function toggleTodoStatus(todoId, currentStatus) {
+            const nextStatus = {
+                'pending': 'in-progress',
+                'in-progress': 'completed',
+                'completed': 'pending'
+            };
+
+            try {
+                const response = await fetch(`/api/todos/${todoId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        status: nextStatus[currentStatus]
+                    })
+                });
+
+                if (response.ok) {
+                    await loadData();
+                } else {
+                    const error = await response.json();
+                    showError(error.error || 'Failed to update todo');
+                }
+            } catch (error) {
+                showError('Failed to update todo: ' + error.message);
+            }
+        }
+
+        async function deleteProject(projectId) {
+            if (!confirm('Are you sure you want to delete this project?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/projects/${projectId}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    await loadData();
+                } else {
+                    const error = await response.json();
+                    showError(error.error || 'Failed to delete project');
+                }
+            } catch (error) {
+                showError('Failed to delete project: ' + error.message);
+            }
+        }
+
+        async function removeDocument(projectId, documentId) {
+            try {
+                const response = await fetch(`/api/projects/${projectId}/documents/${documentId}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    await loadData();
+                } else {
+                    const error = await response.json();
+                    showError(error.error || 'Failed to remove document');
+                }
+            } catch (error) {
+                showError('Failed to remove document: ' + error.message);
+            }
+        }
+
+        // Form submissions
+        document.getElementById('createProjectForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const data = {
+                name: document.getElementById('projectName').value,
+                description: document.getElementById('projectDescription').value,
+                workspacePath: document.getElementById('workspacePath').value
+            };
+
+            try {
+                const response = await fetch('/api/projects', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (response.ok) {
+                    hideCreateProjectModal();
+                    await loadData();
+                } else {
+                    const error = await response.json();
+                    showError(error.error || 'Failed to create project');
+                }
+            } catch (error) {
+                showError('Failed to create project: ' + error.message);
+            }
+        });
+
+        document.getElementById('createTodoForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const data = {
+                title: document.getElementById('todoTitle').value,
+                description: document.getElementById('todoDescription').value,
+                phaseId: document.getElementById('todoPhase').value || undefined
+            };
+
+            try {
+                const response = await fetch(`/api/projects/${currentProjectId}/todos`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (response.ok) {
+                    hideCreateTodoModal();
+                    await loadData();
+                } else {
+                    const error = await response.json();
+                    showError(error.error || 'Failed to create todo');
+                }
+            } catch (error) {
+                showError('Failed to create todo: ' + error.message);
+            }
+        });
+
+        // Load data when page loads
+        document.addEventListener('DOMContentLoaded', loadData);
+    </script>
+</body>
+</html>
