@@ -1,5 +1,10 @@
 #!/usr/bin/env node
 
+// Default NODE_ENV to production if not set
+if (!process.env.NODE_ENV) {
+  process.env.NODE_ENV = 'production';
+}
+
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {

@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "MCP server for managing todo lists with projects and document attachments",
   "main": "dist/index.js",
+  "bin": {
+    "todos-mcp": "dist/index.js"
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsx watch src/index.ts",
