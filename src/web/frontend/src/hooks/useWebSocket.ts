@@ -326,11 +326,18 @@ export function useWebSocket({
     });
 
     socket.on('todo:created', (data) => {
+      // Ensure dates are properly parsed
+      const newTodo = {
+        ...data.todo,
+        createdAt: new Date(data.todo.createdAt),
+        updatedAt: new Date(data.todo.updatedAt)
+      };
+      
       setState(prev => ({
         ...prev,
         projects: prev.projects.map(p => 
           p.id === data.projectId 
-            ? { ...p, todos: [...p.todos, data.todo] }
+            ? { ...p, todos: [...p.todos, newTodo] }
             : p
         )
       }));
@@ -347,13 +354,20 @@ export function useWebSocket({
     });
 
     socket.on('todo:updated', (data) => {
+      // Ensure dates are properly parsed
+      const updatedTodo = {
+        ...data.todo,
+        createdAt: new Date(data.todo.createdAt),
+        updatedAt: new Date(data.todo.updatedAt)
+      };
+      
       setState(prev => ({
         ...prev,
         projects: prev.projects.map(p => 
           p.id === data.projectId 
             ? { 
                 ...p, 
-                todos: p.todos.map(t => t.id === data.todo.id ? data.todo : t)
+                todos: p.todos.map(t => t.id === updatedTodo.id ? updatedTodo : t)
               }
             : p
         )

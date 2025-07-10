@@ -151,6 +151,9 @@ export function WorkspaceView() {
 
   const handleWorkspaceChange = (path: string) => {
     console.log('🔄 User selected workspace:', path);
+    // First switch the workspace data
+    switchWorkspace(path);
+    // Then navigate to update the URL
     navigate(`/workspace/${encodeURIComponent(path)}`);
   };
 

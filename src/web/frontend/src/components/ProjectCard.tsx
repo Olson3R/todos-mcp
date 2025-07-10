@@ -110,8 +110,11 @@ export function ProjectCard({ project, onCreateTodo, onUpdateTodo }: ProjectCard
 
   const sortedTodos = [...project.todos].sort((a, b) => a.order - b.order);
   const completedTodos = sortedTodos.filter(t => t.status === 'completed').length;
+  const inProgressTodos = sortedTodos.filter(t => t.status === 'in-progress').length;
+  const pendingTodos = sortedTodos.filter(t => t.status === 'pending').length;
   const totalTodos = sortedTodos.length;
-  const progress = totalTodos > 0 ? (completedTodos / totalTodos) * 100 : 0;
+  const completedPercent = totalTodos > 0 ? (completedTodos / totalTodos) * 100 : 0;
+  const inProgressPercent = totalTodos > 0 ? (inProgressTodos / totalTodos) * 100 : 0;
 
   return (
     <div className="bg-white rounded-lg shadow-lg overflow-hidden">
@@ -124,16 +127,25 @@ export function ProjectCard({ project, onCreateTodo, onUpdateTodo }: ProjectCard
               <p className="text-blue-100 text-sm mb-4">{project.description}</p>
             )}
             
-            {/* Progress Bar */}
+            {/* Multi-part Progress Bar */}
             <div className="flex items-center gap-3">
-              <div className="flex-1 bg-blue-500 rounded-full h-2">
-                <div 
-                  className="bg-white rounded-full h-2 transition-all duration-300"
-                  style={{ width: `${progress}%` }}
-                />
+              <div className="flex-1 bg-blue-500 rounded-full h-2 overflow-hidden">
+                <div className="flex h-full">
+                  {/* Completed segment */}
+                  <div 
+                    className="bg-green-400 transition-all duration-300"
+                    style={{ width: `${completedPercent}%` }}
+                  />
+                  {/* In-progress segment */}
+                  <div 
+                    className="bg-orange-400 transition-all duration-300"
+                    style={{ width: `${inProgressPercent}%` }}
+                  />
+                  {/* Pending remains as background (blue-500) */}
+                </div>
               </div>
               <span className="text-xs text-blue-100">
-                {completedTodos}/{totalTodos}
+                {completedTodos}✓ {inProgressTodos}⏳ {pendingTodos}⏸ 
               </span>
             </div>
           </div>

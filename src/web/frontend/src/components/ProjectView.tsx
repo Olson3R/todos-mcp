@@ -732,24 +732,24 @@ export function ProjectView({ projects, onCreateTodo, onUpdateTodo }: ProjectVie
                         fill={getPriorityColor(node.todo.priority)}
                       />
                       
-                      {/* Title */}
+                      {/* Title - always prominent */}
                       <text
                         x={node.x + 30}
                         y={node.y + 25}
-                        fontSize="13"
-                        fontWeight="600"
-                        fill="#1f2937"
+                        fontSize="14"
+                        fontWeight="700"
+                        fill="#111827"
                       >
-                        {node.todo.title.length > 20 ? `${node.todo.title.slice(0, 20)}...` : node.todo.title}
+                        {node.todo.title.length > 18 ? `${node.todo.title.slice(0, 18)}...` : node.todo.title}
                       </text>
                       
-                      {/* Status */}
+                      {/* Status - smaller and less prominent */}
                       <text
                         x={node.x + 30}
                         y={node.y + 42}
-                        fontSize="11"
+                        fontSize="10"
                         fontWeight="500"
-                        fill="#6b7280"
+                        fill="#9ca3af"
                       >
                         {node.todo.status.replace('-', ' ').toUpperCase()}
                       </text>

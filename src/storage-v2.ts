@@ -108,14 +108,27 @@ export class TodosStorageV2 {
   
   // Atomic file operations
   protected async writeJsonFile(filePath: string, data: any): Promise<void> {
+    // Ensure directory exists
+    const dir = path.dirname(filePath);
+    await fs.mkdir(dir, { recursive: true });
+    
     const tempPath = `${filePath}.tmp`;
     await fs.writeFile(tempPath, JSON.stringify(data, null, 2));
     await fs.rename(tempPath, filePath);
   }
   
   protected async readJsonFile<T>(filePath: string): Promise<T> {
-    const data = await fs.readFile(filePath, 'utf-8');
-    return JSON.parse(data);
+    try {
+      const data = await fs.readFile(filePath, 'utf-8');
+      return JSON.parse(data);
+    } catch (error: any) {
+      if (error.code === 'ENOENT') {
+        throw new Error(`File not found: ${filePath}`);
+      } else if (error instanceof SyntaxError) {
+        throw new Error(`Invalid JSON in file: ${filePath}`);
+      }
+      throw error;
+    }
   }
   
   // Migration from old format
