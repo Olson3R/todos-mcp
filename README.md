@@ -18,6 +18,65 @@ A TypeScript MCP (Model Context Protocol) server for managing todo lists with pr
 npm install
 ```
 
+## MCP Setup for Claude Desktop
+
+### Option 1: Global Installation (Recommended)
+
+1. Build and install globally:
+   ```bash
+   npm install
+   npm run build
+   npm i -g .
+   ```
+
+2. Add to Claude Desktop:
+   ```bash
+   claude mcp add-json <<EOF
+   {
+     "mcpServers": {
+       "todos-mcp": {
+         "command": "todos-mcp"
+       }
+     }
+   }
+   EOF
+   ```
+
+### Option 2: Local Installation
+
+1. Build the project:
+   ```bash
+   npm install
+   npm run build
+   ```
+
+2. Add to Claude Desktop with full path:
+   ```bash
+   claude mcp add-json <<EOF
+   {
+     "mcpServers": {
+       "todos-mcp": {
+         "command": "node",
+         "args": ["${PWD}/dist/index-scoped.js"]
+       }
+     }
+   }
+   EOF
+   ```
+
+### Verifying MCP Installation
+
+1. Restart Claude Desktop after adding the configuration
+2. In a new conversation, you should have access to all MCP tools listed below
+3. Test with: "Create a new project called 'My Project'" or "List all my projects"
+
+### Troubleshooting MCP Setup
+
+- If the MCP server doesn't appear in Claude, ensure the path in the configuration is absolute
+- Check that the project has been built (`npm run build`)
+- Verify Node.js is installed and accessible from your PATH
+- The server stores data in `todos-data.json` in the current working directory
+
 ## Usage
 
 ### MCP Server
@@ -43,7 +102,16 @@ Start the web server:
 npm run web
 ```
 
-Then visit `http://localhost:3000` to use the web interface.
+Then visit `http://localhost:3003` to use the web interface.
+
+### Usage Examples
+
+Once the MCP server is installed in Claude Desktop, you can ask Claude to:
+- "Create a new project called 'My Project'"
+- "List all my projects"
+- "Create a todo item in my project"
+- "Show me all workspaces"
+- "Update a todo's status to completed"
 
 ## MCP Tools
 
@@ -98,6 +166,19 @@ Workspace (Claude Code directory)
 ## Configuration
 
 The server stores data in `todos-data.json` in the current working directory by default.
+
+## Documentation
+
+Additional documentation can be found in the `docs/` directory:
+
+- `CONCURRENT_WORK_STRATEGY.md` - Multi-worker coordination strategies
+- `DEPENDENCY_GRAPH_DESIGN.md` - Todo dependency management
+- `DEPENDENCY_IMPLEMENTATION_SUMMARY.md` - Implementation details
+- `MULTI_CLAUDE_WORKFLOW.md` - Multi-Claude workflow patterns
+- `NEW_FILE_STRUCTURE.md` - Project file organization
+- `SCOPED_DATA_DESIGN.md` - Scoped data architecture
+- `STATE_CHANGE_TRACKING_DESIGN.md` - Change tracking system
+- `WEBSITE_UPGRADE_PLAN.md` - Web interface upgrade plan
 
 ## Development
 

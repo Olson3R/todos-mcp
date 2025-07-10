@@ -12,15 +12,32 @@ import {
   ListToolsRequestSchema,
   Tool,
 } from '@modelcontextprotocol/sdk/types.js';
-import { TodosStorage } from './storage.js';
+import { TodosStorageV2 } from './storage-v2.js';
 import { ValidationError } from './validation.js';
+import * as fs from 'fs/promises';
+import * as path from 'path';
 
-const storage = new TodosStorage();
+// Check if migration is needed
+async function checkMigration(): Promise<void> {
+  const oldDataPath = path.join(process.cwd(), 'todos-data.json');
+  
+  try {
+    await fs.access(oldDataPath);
+    console.error('⚠️  Old data format detected!');
+    console.error('Please run migration first: npm run migrate');
+    console.error('Then update your MCP configuration to use todos-mcp-v2');
+    process.exit(1);
+  } catch {
+    // No old data file, good to go
+  }
+}
+
+const storage = new TodosStorageV2();
 
 const server = new Server(
   {
     name: 'todos-mcp',
-    version: '1.0.0',
+    version: '2.0.0',
   },
   {
     capabilities: {
@@ -47,7 +64,7 @@ const tools: Tool[] = [
     name: 'list_projects',
     description: 'List all projects in the current workspace or all workspaces',
     inputSchema: {
-      type: 'object',
+      type: 'object', 
       properties: {
         workspacePath: { type: 'string', description: 'Workspace path to filter by' }
       }
@@ -189,6 +206,16 @@ const tools: Tool[] = [
       type: 'object',
       properties: {}
     }
+  },
+  {
+    name: 'migrate_from_v1',
+    description: 'Migrate data from old format to new format',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        sourcePath: { type: 'string', description: 'Path to old todos-data.json file (optional)' }
+      }
+    }
   }
 ];
 
@@ -198,7 +225,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
-  
+
   if (!args) {
     return {
       content: [
@@ -237,7 +264,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         } else {
           projects = await storage.listProjects();
         }
-        
         return {
           content: [
             {
@@ -260,7 +286,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             ]
           };
         }
-        
         return {
           content: [
             {
@@ -287,7 +312,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             ]
           };
         }
-        
         return {
           content: [
             {
@@ -316,7 +340,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           name: args.name as string,
           description: args.description as string
         });
-        
         if (!phase) {
           return {
             content: [
@@ -327,7 +350,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             ]
           };
         }
-        
         return {
           content: [
             {
@@ -345,7 +367,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           description: args.description as string,
           phaseId: args.phaseId as string
         });
-        
         if (!todo) {
           return {
             content: [
@@ -356,7 +377,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             ]
           };
         }
-        
         return {
           content: [
             {
@@ -375,7 +395,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           status: args.status as 'pending' | 'in-progress' | 'completed',
           phaseId: args.phaseId as string
         });
-        
         if (!todo) {
           return {
             content: [
@@ -386,7 +405,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             ]
           };
         }
-        
         return {
           content: [
             {
@@ -414,7 +432,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           projectId: args.projectId as string,
           todoIds: args.todoIds as string[]
         });
-        
         return {
           content: [
             {
@@ -435,7 +452,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           confluenceSpace: args.confluenceSpace as string,
           confluencePage: args.confluencePage as string
         });
-        
         if (!document) {
           return {
             content: [
@@ -446,7 +462,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             ]
           };
         }
-        
         return {
           content: [
             {
@@ -481,6 +496,18 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
+      case 'migrate_from_v1': {
+        await storage.migrateFromV1(args.sourcePath as string);
+        return {
+          content: [
+            {
+              type: 'text',
+              text: 'Migration completed successfully! Data is now stored in ~/.claude-todos-mcp/data/'
+            }
+          ]
+        };
+      }
+
       default:
         return {
           content: [
@@ -492,10 +519,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
     }
   } catch (error) {
-    const errorMessage = error instanceof ValidationError 
+    const errorMessage = error instanceof ValidationError
       ? `Validation Error: ${error.message}`
       : `Error: ${error instanceof Error ? error.message : 'Unknown error'}`;
-    
+
     return {
       content: [
         {
@@ -508,6 +535,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 });
 
 async function main() {
+  await checkMigration();
+  
   const transport = new StdioServerTransport();
   await server.connect(transport);
 }
