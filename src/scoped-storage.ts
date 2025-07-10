@@ -443,6 +443,83 @@ export class ScopedTodosStorage extends TodosStorageV2 {
     
     return updated;
   }
+
+  async changeStatus(todoId: string, newStatus: 'pending' | 'in-progress' | 'completed'): Promise<TodoItem | null> {
+    this.ensureWorkerRegistered();
+    
+    const startTime = Date.now();
+    
+    // Find project containing the todo
+    const projects = await this.listProjects();
+    let targetProject: Project | null = null;
+    let workspaceId: string | null = null;
+    
+    for (const project of projects) {
+      if (project.todos.some(t => t.id === todoId)) {
+        targetProject = project;
+        workspaceId = await this.findWorkspaceForProject(project.id);
+        break;
+      }
+    }
+    
+    if (!targetProject || !workspaceId) return null;
+    
+    const todoIndex = targetProject.todos.findIndex(t => t.id === todoId);
+    if (todoIndex === -1) return null;
+
+    const oldTodo = targetProject.todos[todoIndex];
+    
+    // Check if todo can be moved to in-progress based on dependencies
+    if (newStatus === 'in-progress') {
+      const { canStart, reason } = this.dependencyManager.canStartTodo(
+        targetProject.todos,
+        todoId
+      );
+      
+      if (!canStart) {
+        throw new Error(`Cannot start todo: ${reason}`);
+      }
+    }
+    
+    // Only update status and updatedAt, preserve all other fields
+    const updated: TodoItem = {
+      ...oldTodo,
+      status: newStatus,
+      updatedAt: new Date()
+    };
+    
+    targetProject.todos[todoIndex] = updated;
+    targetProject.updatedAt = new Date();
+    
+    await this.writeJsonFile(
+      this.getProjectFile(workspaceId, targetProject.id),
+      targetProject
+    );
+    
+    // Log project-level event
+    await this.logProjectEvent(targetProject.id, targetProject.workspaceId, {
+      workerId: this.currentWorker!.id,
+      sessionId: this.currentWorker!.sessionId,
+      type: 'todo.updated',
+      entityType: 'todo',
+      entityId: todoId,
+      action: 'update',
+      oldValue: oldTodo,
+      newValue: updated,
+      reason: `Changed status from "${oldTodo.status}" to "${newStatus}"`,
+      duration: Date.now() - startTime,
+      changes: [{
+        field: 'status',
+        oldValue: oldTodo.status,
+        newValue: newStatus,
+        type: 'modified'
+      }],
+      relatedChanges: [],
+      conflictsWith: []
+    });
+    
+    return updated;
+  }
   
   async deleteTodo(todoId: string): Promise<boolean> {
     this.ensureWorkerRegistered();

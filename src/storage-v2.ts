@@ -460,6 +460,54 @@ export class TodosStorageV2 {
     
     return updated;
   }
+
+  async changeStatus(todoId: string, newStatus: 'pending' | 'in-progress' | 'completed'): Promise<TodoItem | null> {
+    // Find project containing the todo
+    const projects = await this.listProjects();
+    let targetProject: Project | null = null;
+    let workspaceId: string | null = null;
+    
+    for (const project of projects) {
+      if (project.todos.some(t => t.id === todoId)) {
+        targetProject = project;
+        workspaceId = await this.findWorkspaceForProject(project.id);
+        break;
+      }
+    }
+    
+    if (!targetProject || !workspaceId) return null;
+    
+    const todoIndex = targetProject.todos.findIndex(t => t.id === todoId);
+    if (todoIndex === -1) return null;
+    
+    // Check status constraints
+    if (newStatus === 'in-progress') {
+      const inProgressTodo = targetProject.todos.find(
+        t => t.status === 'in-progress' && t.id !== todoId
+      );
+      if (inProgressTodo) {
+        throw new ValidationError('Only one todo can be in-progress at a time');
+      }
+    }
+    
+    // Only update status and updatedAt, preserve all other fields
+    const existingTodo = targetProject.todos[todoIndex];
+    const updated = {
+      ...existingTodo,
+      status: newStatus,
+      updatedAt: new Date()
+    };
+    
+    targetProject.todos[todoIndex] = updated;
+    targetProject.updatedAt = new Date();
+    
+    await this.writeJsonFile(
+      this.getProjectFile(workspaceId, targetProject.id),
+      targetProject
+    );
+    
+    return updated;
+  }
   
   async deleteTodo(todoId: string): Promise<boolean> {
     const projects = await this.listProjects();

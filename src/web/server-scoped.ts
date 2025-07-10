@@ -178,6 +178,124 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Dedicated status change handlers that preserve data integrity
+  socket.on('todo:claim', async (data: { todoId: string }) => {
+    try {
+      const workerId = socketToWorker.get(socket.id);
+      if (!workerId) {
+        socket.emit('error', { message: 'Worker not registered' });
+        return;
+      }
+
+      const oldTodo = await findTodoById(data.todoId);
+      const updatedTodo = await storage.changeStatus(data.todoId, 'in-progress');
+      
+      if (updatedTodo && oldTodo) {
+        const project = await findProjectByTodoId(data.todoId);
+        if (project) {
+          // Broadcast update to workspace
+          io.to(`workspace:${project.workspaceId}`).emit('todo:updated', {
+            todo: updatedTodo,
+            oldTodo,
+            projectId: project.id,
+            workerId,
+            timestamp: new Date(),
+            changes: ['status']
+          });
+
+          // Update dependency graph
+          const graph = await storage.getDependencyGraph(project.id);
+          io.to(`workspace:${project.workspaceId}`).emit('dependency-graph:updated', {
+            projectId: project.id,
+            graph,
+            workerId
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error claiming todo:', error);
+      socket.emit('error', { message: error instanceof Error ? error.message : 'Failed to claim todo' });
+    }
+  });
+
+  socket.on('todo:finish', async (data: { todoId: string }) => {
+    try {
+      const workerId = socketToWorker.get(socket.id);
+      if (!workerId) {
+        socket.emit('error', { message: 'Worker not registered' });
+        return;
+      }
+
+      const oldTodo = await findTodoById(data.todoId);
+      const updatedTodo = await storage.changeStatus(data.todoId, 'completed');
+      
+      if (updatedTodo && oldTodo) {
+        const project = await findProjectByTodoId(data.todoId);
+        if (project) {
+          // Broadcast update to workspace
+          io.to(`workspace:${project.workspaceId}`).emit('todo:updated', {
+            todo: updatedTodo,
+            oldTodo,
+            projectId: project.id,
+            workerId,
+            timestamp: new Date(),
+            changes: ['status']
+          });
+
+          // Update dependency graph
+          const graph = await storage.getDependencyGraph(project.id);
+          io.to(`workspace:${project.workspaceId}`).emit('dependency-graph:updated', {
+            projectId: project.id,
+            graph,
+            workerId
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error finishing todo:', error);
+      socket.emit('error', { message: error instanceof Error ? error.message : 'Failed to finish todo' });
+    }
+  });
+
+  socket.on('todo:unclaim', async (data: { todoId: string }) => {
+    try {
+      const workerId = socketToWorker.get(socket.id);
+      if (!workerId) {
+        socket.emit('error', { message: 'Worker not registered' });
+        return;
+      }
+
+      const oldTodo = await findTodoById(data.todoId);
+      const updatedTodo = await storage.changeStatus(data.todoId, 'pending');
+      
+      if (updatedTodo && oldTodo) {
+        const project = await findProjectByTodoId(data.todoId);
+        if (project) {
+          // Broadcast update to workspace
+          io.to(`workspace:${project.workspaceId}`).emit('todo:updated', {
+            todo: updatedTodo,
+            oldTodo,
+            projectId: project.id,
+            workerId,
+            timestamp: new Date(),
+            changes: ['status']
+          });
+
+          // Update dependency graph
+          const graph = await storage.getDependencyGraph(project.id);
+          io.to(`workspace:${project.workspaceId}`).emit('dependency-graph:updated', {
+            projectId: project.id,
+            graph,
+            workerId
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error unclaiming todo:', error);
+      socket.emit('error', { message: error instanceof Error ? error.message : 'Failed to unclaim todo' });
+    }
+  });
+
   socket.on('todo:update', async (data: UpdateTodoRequest) => {
     try {
       const workerId = socketToWorker.get(socket.id);

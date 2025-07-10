@@ -66,11 +66,11 @@ export function ProjectCard({ project, onCreateTodo, onUpdateTodo }: ProjectCard
   const getStatusColors = (status: string) => {
     switch (status) {
       case 'completed':
-        return 'border-green-400 bg-green-50';
+        return 'border-green-400 bg-green-50 text-green-800';
       case 'in-progress':
-        return 'border-orange-400 bg-orange-50';
+        return 'border-orange-400 bg-orange-50 text-orange-800';
       default:
-        return 'border-gray-300 bg-white';
+        return 'border-gray-300 bg-white text-gray-900';
     }
   };
 
@@ -200,12 +200,12 @@ export function ProjectCard({ project, onCreateTodo, onUpdateTodo }: ProjectCard
                   </div>
                   
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium text-gray-900 text-sm">
+                    <div className="font-medium text-sm">
                       {todo.title}
                     </div>
                     
                     {todo.description && (
-                      <div className="text-xs text-gray-600 mt-1">
+                      <div className="text-xs opacity-75 mt-1">
                         {todo.description}
                       </div>
                     )}
@@ -221,7 +221,7 @@ export function ProjectCard({ project, onCreateTodo, onUpdateTodo }: ProjectCard
                       
                       {/* Dependencies */}
                       {todo.dependsOn.length > 0 && (
-                        <div className="flex items-center text-xs text-gray-500">
+                        <div className="flex items-center text-xs opacity-60">
                           <Link className="w-3 h-3 mr-1" />
                           {todo.dependsOn.length} dep{todo.dependsOn.length !== 1 ? 's' : ''}
                         </div>
@@ -237,7 +237,7 @@ export function ProjectCard({ project, onCreateTodo, onUpdateTodo }: ProjectCard
                       
                       {/* Duration estimate */}
                       {todo.estimatedDuration && (
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs opacity-60">
                           ~{todo.estimatedDuration}min
                         </div>
                       )}

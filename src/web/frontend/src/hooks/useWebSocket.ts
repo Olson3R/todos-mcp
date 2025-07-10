@@ -261,6 +261,7 @@ export function useWebSocket({
     // Workspace state
     socket.on('workspace:state', (data) => {
       console.log('🏠 Workspace state received:', data);
+      
       // Deduplicate workers by id
       const uniqueWorkers = data.workers.filter((worker: any, index: number, arr: any[]) => 
         arr.findIndex(w => w.id === worker.id) === index
@@ -529,7 +530,42 @@ export function useWebSocket({
     dependsOn?: string[];
   }) => {
     if (state.socket) {
-      state.socket.emit('todo:update', { id, ...updates });
+      // Use specific status change events for better data integrity
+      if (updates.status && Object.keys(updates).length === 1) {
+        switch (updates.status) {
+          case 'in-progress':
+            state.socket.emit('todo:claim', { todoId: id });
+            break;
+          case 'completed':
+            state.socket.emit('todo:finish', { todoId: id });
+            break;
+          case 'pending':
+            state.socket.emit('todo:unclaim', { todoId: id });
+            break;
+        }
+      } else {
+        // For other updates (title, description, etc.), use the general update
+        state.socket.emit('todo:update', { id, ...updates });
+      }
+    }
+  }, [state.socket]);
+
+  // Dedicated status change methods
+  const claimTodo = useCallback((todoId: string) => {
+    if (state.socket) {
+      state.socket.emit('todo:claim', { todoId });
+    }
+  }, [state.socket]);
+
+  const finishTodo = useCallback((todoId: string) => {
+    if (state.socket) {
+      state.socket.emit('todo:finish', { todoId });
+    }
+  }, [state.socket]);
+
+  const unclaimTodo = useCallback((todoId: string) => {
+    if (state.socket) {
+      state.socket.emit('todo:unclaim', { todoId });
     }
   }, [state.socket]);
 
@@ -607,6 +643,9 @@ export function useWebSocket({
     createProject,
     createTodo,
     updateTodo,
+    claimTodo,
+    finishTodo,
+    unclaimTodo,
     addDependency,
     removeDependency,
     sendHeartbeat,

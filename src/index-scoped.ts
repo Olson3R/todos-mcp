@@ -140,6 +140,39 @@ const tools: Tool[] = [
     }
   },
   {
+    name: 'claim_todo',
+    description: 'Claim a todo and mark it as in-progress (preserves all todo data)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        todoId: { type: 'string', description: 'Todo ID to claim' }
+      },
+      required: ['todoId']
+    }
+  },
+  {
+    name: 'finish_todo',
+    description: 'Mark a todo as completed (preserves all todo data)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        todoId: { type: 'string', description: 'Todo ID to finish' }
+      },
+      required: ['todoId']
+    }
+  },
+  {
+    name: 'unclaim_todo',
+    description: 'Mark a todo as pending (return to available work)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        todoId: { type: 'string', description: 'Todo ID to unclaim' }
+      },
+      required: ['todoId']
+    }
+  },
+  {
     name: 'list_projects',
     description: 'List all projects in the workspace',
     inputSchema: {
@@ -522,6 +555,42 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             {
               type: 'text',
               text: success ? '✅ Todo deleted' : '❌ Todo not found'
+            }
+          ]
+        };
+      }
+
+      case 'claim_todo': {
+        const result = await storage.changeStatus(args.todoId as string, 'in-progress');
+        return {
+          content: [
+            {
+              type: 'text',
+              text: result ? '✅ Todo claimed and marked in-progress' : '❌ Todo not found or cannot be claimed'
+            }
+          ]
+        };
+      }
+
+      case 'finish_todo': {
+        const result = await storage.changeStatus(args.todoId as string, 'completed');
+        return {
+          content: [
+            {
+              type: 'text',
+              text: result ? '✅ Todo completed!' : '❌ Todo not found'
+            }
+          ]
+        };
+      }
+
+      case 'unclaim_todo': {
+        const result = await storage.changeStatus(args.todoId as string, 'pending');
+        return {
+          content: [
+            {
+              type: 'text',
+              text: result ? '✅ Todo returned to pending status' : '❌ Todo not found'
             }
           ]
         };
