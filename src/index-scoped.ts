@@ -94,7 +94,7 @@ const tools: Tool[] = [
   },
   {
     name: 'create_todo',
-    description: 'Create a new todo item in a project with optional dependencies',
+    description: 'Create a new todo item in a project with application areas and optional dependencies',
     inputSchema: {
       type: 'object',
       properties: {
@@ -104,9 +104,24 @@ const tools: Tool[] = [
         phaseId: { type: 'string', description: 'Phase ID (optional)' },
         dependsOn: { type: 'array', items: { type: 'string' }, description: 'Array of todo IDs this todo depends on' },
         estimatedDuration: { type: 'number', description: 'Estimated duration in minutes' },
-        priority: { type: 'string', enum: ['low', 'medium', 'high', 'critical'], description: 'Todo priority' }
+        priority: { type: 'string', enum: ['low', 'medium', 'high', 'critical'], description: 'Todo priority' },
+        areas: { 
+          type: 'array', 
+          items: { 
+            type: 'string',
+            enum: ['frontend', 'backend', 'database', 'api', 'auth', 'infrastructure', 'testing', 'documentation', 'ui/ux', 'security', 'performance', 'deployment']
+          },
+          minItems: 1,
+          description: 'Application areas this todo affects (required)' 
+        },
+        primaryArea: { 
+          type: 'string',
+          enum: ['frontend', 'backend', 'database', 'api', 'auth', 'infrastructure', 'testing', 'documentation', 'ui/ux', 'security', 'performance', 'deployment'],
+          description: 'Primary area for categorization (optional - defaults to first area)' 
+        },
+        notes: { type: 'string', description: 'Additional notes or context for the todo' }
       },
-      required: ['projectId', 'title']
+      required: ['projectId', 'title', 'areas']
     }
   },
   {
@@ -123,7 +138,9 @@ const tools: Tool[] = [
         dependsOn: { type: 'array', items: { type: 'string' }, description: 'Array of todo IDs this todo depends on' },
         estimatedDuration: { type: 'number', description: 'Estimated duration in minutes' },
         actualDuration: { type: 'number', description: 'Actual time spent in minutes' },
-        priority: { type: 'string', enum: ['low', 'medium', 'high', 'critical'], description: 'Todo priority' }
+        priority: { type: 'string', enum: ['low', 'medium', 'high', 'critical'], description: 'Todo priority' },
+        notes: { type: 'string', description: 'Additional notes or context for the todo' },
+        completionSummary: { type: 'string', description: 'Summary of changes (required when marking as completed)' }
       },
       required: ['id']
     }
@@ -156,9 +173,10 @@ const tools: Tool[] = [
     inputSchema: {
       type: 'object',
       properties: {
-        todoId: { type: 'string', description: 'Todo ID to finish' }
+        todoId: { type: 'string', description: 'Todo ID to finish' },
+        completionSummary: { type: 'string', description: 'Summary of changes made while completing this todo' }
       },
-      required: ['todoId']
+      required: ['todoId', 'completionSummary']
     }
   },
   {
@@ -477,6 +495,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'create_todo': {
+        const areas = args.areas as string[];
+        const primaryArea = args.primaryArea as string || areas[0]; // Default to first area
+        
         const todo = await storage.createTodo({
           projectId: args.projectId as string,
           title: args.title as string,
@@ -484,7 +505,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           phaseId: args.phaseId as string,
           dependsOn: args.dependsOn as string[],
           estimatedDuration: args.estimatedDuration as number,
-          priority: args.priority as 'low' | 'medium' | 'high' | 'critical'
+          priority: args.priority as 'low' | 'medium' | 'high' | 'critical',
+          areas: areas as any[],
+          primaryArea: primaryArea as any,
+          notes: args.notes as string
         });
         
         if (!todo) {
@@ -500,12 +524,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         
         const depInfo = todo.dependsOn.length > 0 ? ` (depends on ${todo.dependsOn.length} todos)` : '';
         const priorityInfo = todo.priority !== 'medium' ? ` [${todo.priority}]` : '';
+        const areaInfo = ` [${todo.primaryArea}${todo.areas.length > 1 ? ` +${todo.areas.length - 1} more` : ''}]`;
         
         return {
           content: [
             {
               type: 'text',
-              text: `✅ Created todo: ${todo.title} (ID: ${todo.id})${priorityInfo}${depInfo}`
+              text: `✅ Created todo: ${todo.title} (ID: ${todo.id})${priorityInfo}${areaInfo}${depInfo}`
             }
           ]
         };
@@ -521,7 +546,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           dependsOn: args.dependsOn as string[],
           estimatedDuration: args.estimatedDuration as number,
           actualDuration: args.actualDuration as number,
-          priority: args.priority as 'low' | 'medium' | 'high' | 'critical'
+          priority: args.priority as 'low' | 'medium' | 'high' | 'critical',
+          notes: args.notes as string,
+          completionSummary: args.completionSummary as string
         });
         
         if (!todo) {
@@ -573,7 +600,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'finish_todo': {
-        const result = await storage.changeStatus(args.todoId as string, 'completed');
+        const result = await storage.updateTodo({
+          id: args.todoId as string,
+          status: 'completed',
+          completionSummary: args.completionSummary as string
+        });
         return {
           content: [
             {

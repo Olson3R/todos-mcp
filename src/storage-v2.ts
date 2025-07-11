@@ -400,7 +400,12 @@ export class TodosStorageV2 {
       dependsOn: [],
       dependents: [],
       blockedBy: [],
-      priority: 'medium'
+      priority: 'medium',
+      // Application areas - provide defaults for backwards compatibility
+      areas: request.areas || ['backend'],
+      primaryArea: request.primaryArea || request.areas?.[0] || 'backend',
+      // Documentation fields
+      notes: request.notes
     };
     
     project.todos.push(todo);
@@ -443,11 +448,20 @@ export class TodosStorageV2 {
       }
     }
     
+    const oldTodo = targetProject.todos[todoIndex];
     const updated = {
-      ...targetProject.todos[todoIndex],
+      ...oldTodo,
       ...request,
-      id: targetProject.todos[todoIndex].id, // Prevent ID change
-      updatedAt: new Date()
+      id: oldTodo.id, // Prevent ID change
+      updatedAt: new Date(),
+      // Set startedAt when status changes to in-progress
+      startedAt: request.status === 'in-progress' && oldTodo.status !== 'in-progress'
+        ? new Date()
+        : oldTodo.startedAt,
+      // Set completedAt when status changes to completed
+      completedAt: request.status === 'completed' && oldTodo.status !== 'completed' 
+        ? new Date() 
+        : oldTodo.completedAt
     };
     
     targetProject.todos[todoIndex] = updated;
@@ -495,7 +509,15 @@ export class TodosStorageV2 {
     const updated = {
       ...existingTodo,
       status: newStatus,
-      updatedAt: new Date()
+      updatedAt: new Date(),
+      // Set startedAt when status changes to in-progress
+      startedAt: newStatus === 'in-progress' && existingTodo.status !== 'in-progress'
+        ? new Date()
+        : existingTodo.startedAt,
+      // Set completedAt when status changes to completed
+      completedAt: newStatus === 'completed' && existingTodo.status !== 'completed' 
+        ? new Date() 
+        : existingTodo.completedAt
     };
     
     targetProject.todos[todoIndex] = updated;

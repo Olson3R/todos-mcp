@@ -462,7 +462,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           projectId: args.projectId as string,
           title: args.title as string,
           description: args.description as string,
-          phaseId: args.phaseId as string
+          phaseId: args.phaseId as string,
+          areas: ['backend'], // Default area for backwards compatibility
+          primaryArea: 'backend',
+          notes: args.notes as string
         });
         
         if (!todo) {

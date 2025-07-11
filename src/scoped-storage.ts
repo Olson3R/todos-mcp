@@ -270,7 +270,12 @@ export class ScopedTodosStorage extends TodosStorageV2 {
       dependents: [], // Will be computed
       blockedBy: [], // Will be computed
       estimatedDuration: request.estimatedDuration,
-      priority: request.priority || 'medium'
+      priority: request.priority || 'medium',
+      // Application areas
+      areas: request.areas,
+      primaryArea: request.primaryArea || request.areas[0],
+      // Documentation fields
+      notes: request.notes
     };
     
     // Validate dependencies with actual todo ID
@@ -381,6 +386,13 @@ export class ScopedTodosStorage extends TodosStorageV2 {
       }
     }
     
+    // Require completion summary when marking as completed
+    if (request.status === 'completed' && oldTodo.status !== 'completed') {
+      if (!request.completionSummary) {
+        throw new Error('Completion summary is required when marking a todo as completed');
+      }
+    }
+    
     const updated: TodoItem = {
       ...oldTodo,
       ...request,
@@ -388,7 +400,15 @@ export class ScopedTodosStorage extends TodosStorageV2 {
       dependsOn: request.dependsOn !== undefined ? request.dependsOn : oldTodo.dependsOn,
       dependents: oldTodo.dependents, // Keep computed field
       blockedBy: oldTodo.blockedBy, // Keep computed field
-      updatedAt: new Date()
+      updatedAt: new Date(),
+      // Set startedAt when status changes to in-progress
+      startedAt: request.status === 'in-progress' && oldTodo.status !== 'in-progress'
+        ? new Date()
+        : oldTodo.startedAt,
+      // Set completedAt when status changes to completed
+      completedAt: request.status === 'completed' && oldTodo.status !== 'completed' 
+        ? new Date() 
+        : oldTodo.completedAt
     };
     
     targetProject.todos[todoIndex] = updated;
