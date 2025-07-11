@@ -17,6 +17,11 @@ interface TodoItem {
   estimatedDuration?: number;
   actualDuration?: number;
   priority: 'low' | 'medium' | 'high' | 'critical';
+  areas: string[];
+  primaryArea: string;
+  notes?: string;
+  completionSummary?: string;
+  completedAt?: Date;
 }
 
 interface Phase {
@@ -517,7 +522,10 @@ export function useWebSocket({
     dependsOn?: string[];
     priority?: 'low' | 'medium' | 'high' | 'critical';
     estimatedDuration?: number;
-  } = {}) => {
+    areas: string[];
+    primaryArea?: string;
+    notes?: string;
+  }) => {
     if (state.socket) {
       state.socket.emit('todo:create', { projectId, title, ...options });
     }
@@ -528,16 +536,19 @@ export function useWebSocket({
     description?: string;
     status?: 'pending' | 'in-progress' | 'completed';
     dependsOn?: string[];
+    notes?: string;
+    completionSummary?: string;
   }) => {
     if (state.socket) {
       // Use specific status change events for better data integrity
-      if (updates.status && Object.keys(updates).length === 1) {
+      if (updates.status && (Object.keys(updates).length === 1 || (Object.keys(updates).length === 2 && updates.completionSummary))) {
         switch (updates.status) {
           case 'in-progress':
             state.socket.emit('todo:claim', { todoId: id });
             break;
           case 'completed':
-            state.socket.emit('todo:finish', { todoId: id });
+            // For completion, use the general update to include completion summary
+            state.socket.emit('todo:update', { id, ...updates });
             break;
           case 'pending':
             state.socket.emit('todo:unclaim', { todoId: id });

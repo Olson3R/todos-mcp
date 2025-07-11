@@ -1,5 +1,132 @@
-import React, { useState } from 'react';
-import { X, Link } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { X, Link, Check } from 'lucide-react';
+
+// Application areas
+type ApplicationArea = 
+  | 'frontend' | 'backend' | 'database' | 'api'
+  | 'auth' | 'infrastructure' | 'testing' | 'documentation'
+  | 'ui/ux' | 'security' | 'performance' | 'deployment';
+
+interface AreaConfig {
+  id: ApplicationArea;
+  name: string;
+  description: string;
+  color: string;
+  bgColor: string;
+  icon: string;
+  examples: string[];
+}
+
+const APPLICATION_AREAS: Record<ApplicationArea, AreaConfig> = {
+  frontend: {
+    id: 'frontend',
+    name: 'Frontend',
+    description: 'User interface, components, styling, and client-side logic',
+    color: '#3B82F6',
+    bgColor: 'bg-blue-50',
+    icon: '🎨',
+    examples: ['React components', 'CSS styling', 'User interactions']
+  },
+  backend: {
+    id: 'backend',
+    name: 'Backend',
+    description: 'Server-side logic, business rules, and application services',
+    color: '#10B981',
+    bgColor: 'bg-green-50',
+    icon: '⚙️',
+    examples: ['Business logic', 'Service layer', 'Data processing']
+  },
+  database: {
+    id: 'database',
+    name: 'Database',
+    description: 'Data models, migrations, queries, and database optimization',
+    color: '#8B5CF6',
+    bgColor: 'bg-purple-50',
+    icon: '🗄️',
+    examples: ['Schema design', 'Migrations', 'Query optimization']
+  },
+  api: {
+    id: 'api',
+    name: 'API',
+    description: 'REST endpoints, GraphQL resolvers, and API contracts',
+    color: '#F59E0B',
+    bgColor: 'bg-amber-50',
+    icon: '🔌',
+    examples: ['REST endpoints', 'GraphQL schemas', 'API documentation']
+  },
+  auth: {
+    id: 'auth',
+    name: 'Authentication',
+    description: 'User authentication, authorization, and security policies',
+    color: '#EF4444',
+    bgColor: 'bg-red-50',
+    icon: '🔐',
+    examples: ['Login/logout', 'JWT tokens', 'Role-based access']
+  },
+  infrastructure: {
+    id: 'infrastructure',
+    name: 'Infrastructure',
+    description: 'Deployment, hosting, monitoring, and system architecture',
+    color: '#6B7280',
+    bgColor: 'bg-gray-50',
+    icon: '🏗️',
+    examples: ['Docker config', 'CI/CD pipelines', 'Cloud services']
+  },
+  testing: {
+    id: 'testing',
+    name: 'Testing',
+    description: 'Unit tests, integration tests, and quality assurance',
+    color: '#06B6D4',
+    bgColor: 'bg-cyan-50',
+    icon: '🧪',
+    examples: ['Unit tests', 'Integration tests', 'E2E tests']
+  },
+  documentation: {
+    id: 'documentation',
+    name: 'Documentation',
+    description: 'Technical docs, API docs, user guides, and code comments',
+    color: '#84CC16',
+    bgColor: 'bg-lime-50',
+    icon: '📚',
+    examples: ['README files', 'API docs', 'User guides']
+  },
+  'ui/ux': {
+    id: 'ui/ux',
+    name: 'UI/UX',
+    description: 'User experience design, wireframes, and interface design',
+    color: '#EC4899',
+    bgColor: 'bg-pink-50',
+    icon: '🎯',
+    examples: ['User flows', 'Wireframes', 'Design systems']
+  },
+  security: {
+    id: 'security',
+    name: 'Security',
+    description: 'Security audits, vulnerability fixes, and security policies',
+    color: '#DC2626',
+    bgColor: 'bg-red-50',
+    icon: '🛡️',
+    examples: ['Security audits', 'Vulnerability patches', 'HTTPS setup']
+  },
+  performance: {
+    id: 'performance',
+    name: 'Performance',
+    description: 'Optimization, caching, monitoring, and performance tuning',
+    color: '#7C3AED',
+    bgColor: 'bg-violet-50',
+    icon: '⚡',
+    examples: ['Performance optimization', 'Caching', 'Bundle size reduction']
+  },
+  deployment: {
+    id: 'deployment',
+    name: 'Deployment',
+    description: 'Release management, deployment automation, and environment setup',
+    color: '#059669',
+    bgColor: 'bg-emerald-50',
+    icon: '🚀',
+    examples: ['Release automation', 'Environment config', 'Deployment scripts']
+  }
+};
 
 // Define types directly in this file to avoid import issues  
 interface TodoItem {
@@ -17,6 +144,8 @@ interface TodoItem {
   estimatedDuration?: number;
   actualDuration?: number;
   priority: 'low' | 'medium' | 'high' | 'critical';
+  areas: ApplicationArea[];
+  primaryArea: ApplicationArea;
 }
 
 interface Phase {
@@ -62,6 +191,8 @@ interface CreateTodoModalProps {
     dependsOn?: string[];
     priority?: 'low' | 'medium' | 'high' | 'critical';
     estimatedDuration?: number;
+    areas: ApplicationArea[];
+    primaryArea?: ApplicationArea;
   }) => void;
 }
 
@@ -71,7 +202,40 @@ export function CreateTodoModal({ projectId, projects, onClose, onCreate }: Crea
   const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'critical'>('medium');
   const [estimatedDuration, setEstimatedDuration] = useState<number | ''>('');
   const [selectedDependencies, setSelectedDependencies] = useState<string[]>([]);
+  const [selectedAreas, setSelectedAreas] = useState<ApplicationArea[]>([]);
+  const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Smart area suggestions based on content
+  const suggestedAreas = useMemo(() => {
+    const content = `${title} ${description}`.toLowerCase();
+    const suggestions: ApplicationArea[] = [];
+    
+    // Keywords for each area
+    const areaKeywords = {
+      frontend: ['ui', 'component', 'react', 'css', 'styling', 'user interface', 'frontend', 'client'],
+      backend: ['server', 'api endpoint', 'business logic', 'service', 'backend', 'server-side'],
+      database: ['schema', 'migration', 'query', 'table', 'data model', 'database', 'sql'],
+      api: ['endpoint', 'rest', 'graphql', 'request', 'response', 'api'],
+      auth: ['login', 'authentication', 'authorization', 'security', 'token', 'auth'],
+      infrastructure: ['docker', 'deployment', 'ci/cd', 'cloud', 'hosting', 'infrastructure'],
+      testing: ['test', 'unit test', 'integration', 'e2e', 'testing', 'spec'],
+      documentation: ['docs', 'documentation', 'readme', 'guide', 'manual'],
+      'ui/ux': ['design', 'user experience', 'wireframe', 'mockup', 'ui/ux', 'user flow'],
+      security: ['security', 'vulnerability', 'https', 'encryption', 'audit'],
+      performance: ['performance', 'optimization', 'caching', 'speed', 'bundle'],
+      deployment: ['deploy', 'release', 'environment', 'prod', 'staging']
+    };
+
+    // Check each area for keyword matches
+    Object.entries(areaKeywords).forEach(([area, keywords]) => {
+      if (keywords.some(keyword => content.includes(keyword))) {
+        suggestions.push(area as ApplicationArea);
+      }
+    });
+
+    return suggestions;
+  }, [title, description]);
 
   const currentProject = projects.find(p => p.id === projectId);
   const availableTodos = currentProject?.todos.filter(todo => 
@@ -80,14 +244,17 @@ export function CreateTodoModal({ projectId, projects, onClose, onCreate }: Crea
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) return;
+    if (!title.trim() || selectedAreas.length === 0) return;
 
     setIsSubmitting(true);
     try {
       const options: any = {
         description: description.trim() || undefined,
         priority,
-        dependsOn: selectedDependencies.length > 0 ? selectedDependencies : undefined
+        dependsOn: selectedDependencies.length > 0 ? selectedDependencies : undefined,
+        areas: selectedAreas,
+        primaryArea: selectedAreas[0], // First selected area becomes primary
+        notes: notes.trim() || undefined
       };
 
       if (estimatedDuration && typeof estimatedDuration === 'number') {
@@ -98,6 +265,18 @@ export function CreateTodoModal({ projectId, projects, onClose, onCreate }: Crea
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const toggleArea = (area: ApplicationArea) => {
+    setSelectedAreas(prev => 
+      prev.includes(area) 
+        ? prev.filter(a => a !== area)
+        : [...prev, area]
+    );
+  };
+
+  const applySuggestions = () => {
+    setSelectedAreas(suggestedAreas);
   };
 
   const toggleDependency = (todoId: string) => {
@@ -155,6 +334,93 @@ export function CreateTodoModal({ projectId, projects, onClose, onCreate }: Crea
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors resize-vertical"
                 placeholder="Describe the todo (optional)"
               />
+            </div>
+
+            {/* Application Areas */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <label className="block text-sm font-medium text-gray-700">
+                  Application Areas *
+                </label>
+                {suggestedAreas.length > 0 && selectedAreas.length === 0 && (
+                  <button
+                    type="button"
+                    onClick={applySuggestions}
+                    className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    Apply suggestions ({suggestedAreas.length})
+                  </button>
+                )}
+              </div>
+              
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3">
+                {Object.values(APPLICATION_AREAS).map((area) => {
+                  const isSelected = selectedAreas.includes(area.id);
+                  const isSuggested = suggestedAreas.includes(area.id);
+                  
+                  return (
+                    <button
+                      key={area.id}
+                      type="button"
+                      onClick={() => toggleArea(area.id)}
+                      className={`
+                        p-2 rounded-lg border-2 text-left transition-all duration-200 text-xs
+                        ${isSelected 
+                          ? 'border-blue-500 bg-blue-50 text-blue-900' 
+                          : isSuggested
+                          ? 'border-amber-300 bg-amber-50 text-amber-900 hover:border-amber-400'
+                          : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                        }
+                      `}
+                      title={area.description}
+                    >
+                      <div className="flex items-center gap-1 mb-1">
+                        <span className="text-sm">{area.icon}</span>
+                        <span className="font-medium">{area.name}</span>
+                        {isSelected && <Check className="w-3 h-3 text-blue-600 ml-auto" />}
+                        {isSuggested && !isSelected && (
+                          <span className="text-xs text-amber-600 ml-auto">✨</span>
+                        )}
+                      </div>
+                      <div className="text-xs text-gray-500 leading-tight">
+                        {area.examples[0]}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              
+              {selectedAreas.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {selectedAreas.map((areaId, index) => {
+                    const area = APPLICATION_AREAS[areaId];
+                    return (
+                      <span
+                        key={areaId}
+                        className={`
+                          inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium
+                          ${index === 0 ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-700'}
+                        `}
+                      >
+                        {area.icon} {area.name}
+                        {index === 0 && <span className="text-xs">(primary)</span>}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+              
+              {selectedAreas.length === 0 && (
+                <div className="text-xs text-red-600 mt-2">
+                  Please select at least one application area.
+                </div>
+              )}
+              
+              {selectedAreas.length > 3 && (
+                <div className="text-xs text-amber-600 mt-2">
+                  ⚠️ This todo affects many areas. Consider splitting into focused tasks.
+                </div>
+              )}
             </div>
 
             {/* Priority and Duration */}
@@ -224,6 +490,25 @@ export function CreateTodoModal({ projectId, projects, onClose, onCreate }: Crea
                 )}
               </div>
             )}
+            
+            {/* Notes */}
+            <div>
+              <label htmlFor="todo-notes" className="block text-sm font-medium text-gray-700 mb-2">
+                <span className="inline-block mr-2">📝</span>
+                Notes (optional)
+              </label>
+              <textarea
+                id="todo-notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors resize-vertical"
+                placeholder="Add any additional notes or context for this todo"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Notes are visible to all team members and can help provide context
+              </p>
+            </div>
           </div>
 
           {/* Actions */}
@@ -238,7 +523,7 @@ export function CreateTodoModal({ projectId, projects, onClose, onCreate }: Crea
             </button>
             <button
               type="submit"
-              disabled={!title.trim() || isSubmitting}
+              disabled={!title.trim() || selectedAreas.length === 0 || isSubmitting}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
             >
               {isSubmitting ? 'Creating...' : 'Create Todo'}

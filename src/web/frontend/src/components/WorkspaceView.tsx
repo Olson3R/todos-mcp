@@ -25,6 +25,11 @@ interface TodoItem {
   estimatedDuration?: number;
   actualDuration?: number;
   priority: 'low' | 'medium' | 'high' | 'critical';
+  areas: string[];
+  primaryArea: string;
+  notes?: string;
+  completionSummary?: string;
+  completedAt?: Date;
 }
 
 interface Phase {
@@ -306,7 +311,7 @@ export function WorkspaceView() {
                   </button>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-8">
                   {projects.map((project, index) => (
                     <div key={project.id} className="animate-slide-up" style={{ animationDelay: `${index * 100}ms` }}>
                       <ProjectCard
