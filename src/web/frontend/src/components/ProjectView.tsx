@@ -87,6 +87,10 @@ export function ProjectView({ projects, onCreateTodo, onUpdateTodo }: ProjectVie
   const [selectedTodo, setSelectedTodo] = useState<string | null>(null);
   const [hoveredEdge, setHoveredEdge] = useState<string | null>(null);
   const [selectedEdge, setSelectedEdge] = useState<string | null>(null);
+  const [statusChangeNotification, setStatusChangeNotification] = useState<{
+    message: string;
+    type: 'success' | 'info' | 'warning';
+  } | null>(null);
 
   const project = projects.find(p => p.id === projectId);
 
@@ -381,16 +385,70 @@ export function ProjectView({ projects, onCreateTodo, onUpdateTodo }: ProjectVie
       'completed': 'pending'
     }[todo.status] || 'pending';
 
+    const statusMessages = {
+      'in-progress': `Started working on "${todo.title}"`,
+      'completed': `Completed "${todo.title}"`,
+      'pending': `Moved "${todo.title}" back to pending`
+    };
+
+    // Show notification
+    setStatusChangeNotification({
+      message: statusMessages[nextStatus],
+      type: nextStatus === 'completed' ? 'success' : 'info'
+    });
+
+    // Clear notification after 3 seconds
+    setTimeout(() => {
+      setStatusChangeNotification(null);
+    }, 3000);
+
     onUpdateTodo(todo.id, { status: nextStatus });
   };
 
   const sortedTodos = [...project.todos].sort((a, b) => a.order - b.order);
   const completedTodos = sortedTodos.filter(t => t.status === 'completed').length;
+  const inProgressTodos = sortedTodos.filter(t => t.status === 'in-progress').length;
+  const pendingTodos = sortedTodos.filter(t => t.status === 'pending').length;
   const totalTodos = sortedTodos.length;
-  const progress = totalTodos > 0 ? (completedTodos / totalTodos) * 100 : 0;
+  const completedPercent = totalTodos > 0 ? (completedTodos / totalTodos) * 100 : 0;
+  const inProgressPercent = totalTodos > 0 ? (inProgressTodos / totalTodos) * 100 : 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <>
+      <style jsx>{`
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      {/* Status Change Notification */}
+      {statusChangeNotification && (
+        <div className="fixed top-4 right-4 z-50 animate-fade-in">
+          <div className={`
+            px-4 py-3 rounded-lg shadow-lg border
+            ${statusChangeNotification.type === 'success' 
+              ? 'bg-green-50 border-green-200 text-green-800' 
+              : statusChangeNotification.type === 'warning'
+              ? 'bg-yellow-50 border-yellow-200 text-yellow-800'
+              : 'bg-blue-50 border-blue-200 text-blue-800'
+            }
+          `}>
+            <div className="flex items-center gap-2">
+              {statusChangeNotification.type === 'success' && <CheckCircle className="w-4 h-4" />}
+              {statusChangeNotification.type === 'info' && <Clock className="w-4 h-4" />}
+              <span className="text-sm font-medium">{statusChangeNotification.message}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -398,7 +456,8 @@ export function ProjectView({ projects, onCreateTodo, onUpdateTodo }: ProjectVie
             <div className="flex items-center gap-4">
               <button
                 onClick={() => navigate(-1)}
-                className="p-2 text-gray-400 hover:text-gray-600 rounded-lg"
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-all duration-200"
+                title="Go back"
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
@@ -410,17 +469,37 @@ export function ProjectView({ projects, onCreateTodo, onUpdateTodo }: ProjectVie
                 )}
               </div>
               
-              {/* Progress indicator */}
+              {/* Multi-part Progress indicator */}
               <div className="flex items-center gap-3">
-                <div className="w-32 bg-gray-200 rounded-full h-2">
-                  <div 
-                    className="bg-blue-600 rounded-full h-2 transition-all duration-300"
-                    style={{ width: `${progress}%` }}
-                  />
+                <div className="w-48 bg-gray-200 rounded-full h-3 overflow-hidden">
+                  <div className="flex h-full">
+                    {/* Completed segment */}
+                    <div 
+                      className="bg-green-500 transition-all duration-300"
+                      style={{ width: `${completedPercent}%` }}
+                    />
+                    {/* In-progress segment */}
+                    <div 
+                      className="bg-orange-500 transition-all duration-300"
+                      style={{ width: `${inProgressPercent}%` }}
+                    />
+                    {/* Pending remains as background (gray-200) */}
+                  </div>
                 </div>
-                <span className="text-sm text-gray-600">
-                  {completedTodos}/{totalTodos}
-                </span>
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <span className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    {completedTodos}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                    {inProgressTodos}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
+                    {pendingTodos}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -454,8 +533,20 @@ export function ProjectView({ projects, onCreateTodo, onUpdateTodo }: ProjectVie
                 
               </div>
               
-              <button className="p-2 text-gray-400 hover:text-gray-600">
+              <button 
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-all duration-200"
+                title="Project settings"
+              >
                 <Settings className="w-5 h-5" />
+              </button>
+              
+              <button
+                onClick={() => onCreateTodo(project.id, '', {})}
+                className="btn-primary flex items-center gap-2"
+                title="Add new todo"
+              >
+                <Plus className="w-4 h-4" />
+                Add Todo
               </button>
             </div>
           </div>
@@ -466,6 +557,56 @@ export function ProjectView({ projects, onCreateTodo, onUpdateTodo }: ProjectVie
         {viewMode === 'list' ? (
           // List View
           <div className="space-y-4">
+            {/* Stats Overview */}
+            {totalTodos > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div className="bg-white rounded-lg p-4 border border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Total</p>
+                      <p className="text-2xl font-bold text-gray-900">{totalTodos}</p>
+                    </div>
+                    <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                      <List className="w-4 h-4 text-gray-600" />
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-white rounded-lg p-4 border border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Pending</p>
+                      <p className="text-2xl font-bold text-gray-900">{pendingTodos}</p>
+                    </div>
+                    <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                      <div className="w-4 h-4 rounded-full border-2 border-gray-400" />
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-white rounded-lg p-4 border border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-orange-600">In Progress</p>
+                      <p className="text-2xl font-bold text-orange-900">{inProgressTodos}</p>
+                    </div>
+                    <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                      <Clock className="w-4 h-4 text-orange-600" />
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-white rounded-lg p-4 border border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-green-600">Completed</p>
+                      <p className="text-2xl font-bold text-green-900">{completedTodos}</p>
+                    </div>
+                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                      <CheckCircle className="w-4 h-4 text-green-600" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {sortedTodos.length === 0 ? (
               <div className="card text-center py-16">
                 <div className="bg-gradient-to-br from-blue-50 to-purple-50 w-24 h-24 rounded-full mx-auto mb-6 flex items-center justify-center">
@@ -482,58 +623,90 @@ export function ProjectView({ projects, onCreateTodo, onUpdateTodo }: ProjectVie
                 </button>
               </div>
             ) : (
-              sortedTodos.map((todo) => (
+              sortedTodos.map((todo, index) => (
                 <div
                   key={todo.id}
                   className={`
-                    card p-6 cursor-pointer transition-all duration-200 border-l-4
+                    card p-6 cursor-pointer transition-all duration-300 border-l-4 group
                     ${getStatusColors(todo.status)}
-                    hover:shadow-lg hover:scale-[1.01]
+                    hover:shadow-lg hover:-translate-y-1
                     ${todo.blockedBy.length > 0 ? 'opacity-60' : ''}
-                    ${selectedTodo === todo.id ? 'ring-2 ring-blue-500' : ''}
+                    ${selectedTodo === todo.id ? 'ring-2 ring-blue-500 shadow-lg' : ''}
                   `}
-                  onClick={() => {
+                  style={{ 
+                    animationDelay: `${index * 50}ms`,
+                    animation: 'fadeInUp 0.4s ease-out forwards'
+                  }}
+                  onClick={(e) => {
+                    e.preventDefault();
                     setSelectedTodo(selectedTodo === todo.id ? null : todo.id);
-                    if (!todo.blockedBy.length) toggleTodoStatus(todo);
                   }}
                 >
                   <div className="flex items-start gap-4">
-                    <div className="flex-shrink-0 mt-1">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (!todo.blockedBy.length) {
+                          toggleTodoStatus(todo);
+                          // Add visual feedback
+                          e.currentTarget.style.transform = 'scale(1.2)';
+                          setTimeout(() => {
+                            e.currentTarget.style.transform = 'scale(1)';
+                          }, 150);
+                        }
+                      }}
+                      className="flex-shrink-0 mt-1 p-1 rounded-full hover:bg-gray-100 transition-all duration-200 hover:scale-110"
+                      disabled={todo.blockedBy.length > 0}
+                      title={todo.blockedBy.length > 0 ? "This todo is blocked" : "Click to change status"}
+                    >
                       {getStatusIcon(todo.status)}
-                    </div>
+                    </button>
                     
                     <div className="flex-1">
                       <div className="flex items-start justify-between">
                         <div>
-                          <h3 className="font-semibold text-lg mb-2">{todo.title}</h3>
+                          <h3 className="font-semibold text-lg mb-2 group-hover:text-blue-600 transition-colors duration-200">
+                            {todo.title}
+                          </h3>
                           {todo.description && (
-                            <p className="text-gray-600 mb-3">{todo.description}</p>
+                            <p className="text-gray-600 mb-3 leading-relaxed">{todo.description}</p>
                           )}
                         </div>
                         
-                        <div className={`w-2 h-2 rounded-full ${getPriorityColor(todo.priority)}`} />
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className={`w-3 h-3 rounded-full ${getPriorityColor(todo.priority)}`} 
+                            title={`${todo.priority} priority`}
+                          />
+                          <span className="text-xs text-gray-400 capitalize">{todo.priority}</span>
+                        </div>
                       </div>
                       
                       <div className="flex items-center gap-4 text-sm text-gray-500">
-                        <span className="capitalize">{todo.priority} priority</span>
-                        
                         {todo.estimatedDuration && (
-                          <span>Est. {todo.estimatedDuration}min</span>
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {todo.estimatedDuration}min
+                          </span>
                         )}
                         
                         {todo.dependsOn.length > 0 && (
-                          <div className="flex items-center">
-                            <Link className="w-4 h-4 mr-1" />
+                          <span className="flex items-center gap-1">
+                            <Link className="w-3 h-3" />
                             {todo.dependsOn.length} dependencies
-                          </div>
+                          </span>
                         )}
                         
                         {todo.blockedBy.length > 0 && (
-                          <div className="flex items-center text-red-600">
-                            <AlertCircle className="w-4 h-4 mr-1" />
+                          <span className="flex items-center gap-1 text-red-600">
+                            <AlertCircle className="w-3 h-3" />
                             Blocked
-                          </div>
+                          </span>
                         )}
+                        
+                        <span className="text-xs text-gray-400 ml-auto">
+                          Updated {new Date(todo.updatedAt).toLocaleDateString()}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -706,10 +879,17 @@ export function ProjectView({ projects, onCreateTodo, onUpdateTodo }: ProjectVie
                           style={{
                             filter: isHighlighted ? 'drop-shadow(0 0 12px rgba(59, 130, 246, 0.4))' : 'none'
                           }}
-                          onClick={() => {
+                          onClick={(e) => {
                             setSelectedTodo(selectedTodo === node.id ? null : node.id);
                             setSelectedEdge(null); // Clear edge selection when selecting a node
-                            if (!node.todo.blockedBy.length) toggleTodoStatus(node.todo);
+                            if (!node.todo.blockedBy.length) {
+                              toggleTodoStatus(node.todo);
+                              // Add visual feedback for graph nodes
+                              e.currentTarget.style.filter = 'drop-shadow(0 0 20px rgba(59, 130, 246, 0.8))';
+                              setTimeout(() => {
+                                e.currentTarget.style.filter = isHighlighted ? 'drop-shadow(0 0 12px rgba(59, 130, 246, 0.4))' : 'none';
+                              }, 300);
+                            }
                           }}
                         />
                       
@@ -825,5 +1005,6 @@ export function ProjectView({ projects, onCreateTodo, onUpdateTodo }: ProjectVie
         )}
       </div>
     </div>
+    </>
   );
 }
